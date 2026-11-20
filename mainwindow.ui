@@ -41,7 +41,7 @@
   <customwidget>
    <class>MyGLWidget</class>
    <extends>QOpenGLWidget</extends>
-   <header>myglwidget.h</header>
+   <header location="global">GLWidget.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

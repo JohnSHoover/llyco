@@ -1,6 +1,50 @@
 
-#include "GLWidget.h"
+#include "MyGLWidget.h"
 #include <QDebug>
+
+// Interleaved vertex data: X, Y, Z, R, G, B
+static const float kTriangleVertices[] = {
+     0.0f,  0.5f, 0.0f,   1.0f, 0.2f, 0.2f, // Top (Red)
+    -0.5f, -0.5f, 0.0f,   0.2f, 1.0f, 0.2f, // Bottom-left (Green)
+     0.5f, -0.5f, 0.0f,   0.2f, 0.4f, 1.0f  // Bottom-right (Blue)
+};
+
+static const char *kVertexShaderSource = R"(
+    #version 330 core
+    layout(location = 0) in vec3 aPos;
+    layout(location = 1) in vec3 aColor;
+    uniform mat4 uMvp;
+    out vec3 vColor;
+    void main() {
+        gl_Position = uMvp * vec4(aPos, 1.0);
+        vColor = aColor;
+    }
+)";
+
+static const char *kFragmentShaderSource = R"(
+    #version 330 core
+    in vec3 vColor;
+    out vec4 FragColor;
+    void main() {
+        FragColor = vec4(vColor, 1.0);
+    }
+)";
+
+MyGLWidget::MyGLWidget(QWidget *parent)
+    : QOpenGLWidget(parent),
+      m_vbo(QOpenGLBuffer::VertexBuffer)
+{
+}
+
+MyGLWidget::~MyGLWidget()
+{
+    // Activate context before destroying GPU resources
+    makeCurrent();
+    m_vbo.destroy();
+    m_vao.destroy();
+    m_program.removeAllShaders();
+    doneCurrent();
+}
 
 void MyGLWidget::initializeGL()
 {
@@ -9,12 +53,14 @@ void MyGLWidget::initializeGL()
     glEnable(GL_DEPTH_TEST);
 
     // 1. Compile and link shaders
+    ///*
     if (!m_program.addShaderFromSourceCode(QOpenGLShader::Vertex, kVertexShaderSource))
         qWarning() << "Vertex shader error:" << m_program.log();
     if (!m_program.addShaderFromSourceCode(QOpenGLShader::Fragment, kFragmentShaderSource))
         qWarning() << "Fragment shader error:" << m_program.log();
     if (!m_program.link())
         qWarning() << "Shader link error:" << m_program.log();
+        //*/
 
     // 2. Bind VAO first so it captures the VBO and attribute pointers
     m_vao.create();
@@ -40,7 +86,8 @@ void MyGLWidget::initializeGL()
     m_vbo.release();
 }
 
-void resizeGL(int w, int h) override {
+void MyGLWidget::resizeGL(int w, int h)
+{
     glViewport(0, 0, w, h);
 
     // Update perspective projection matrix
@@ -49,7 +96,8 @@ void resizeGL(int w, int h) override {
     m_projection.perspective(45.0f, aspect, 0.1f, 100.0f);
 }
 
-void paintGL() override {
+void MyGLWidget::paintGL()
+{
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     // Build Model-View-Projection matrix
     QMatrix4x4 view;
